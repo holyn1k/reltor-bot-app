@@ -23,18 +23,42 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # Устанавливаем конкретную версию Gradle, чтобы не зависеть от системной 9.3.1
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: 8.7 
+          gradle-version: 8.7
+
+      # Создаем файл настроек, который принудительно укажет версию плагина Android
+      - name: Create Settings & Init
+        run: |
+          echo "pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+              resolutionStrategy {
+                  eachPlugin {
+                      if (requested.id.id == 'com.android.application') {
+                          useModule('com.android.tools.build:gradle:8.2.2')
+                      }
+                  }
+              }
+          }" > settings.gradle
+          
+          echo "allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }" > init.gradle
 
       - name: Build with Gradle
         run: |
-          # Заходим в папку, где лежит build.gradle
           cd app
-          # Собираем, используя установленный gradle
-          gradle assembleDebug --no-daemon
+          # Копируем созданные файлы в папку приложения и собираем
+          cp ../settings.gradle .
+          gradle assembleDebug --init-script ../init.gradle --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
