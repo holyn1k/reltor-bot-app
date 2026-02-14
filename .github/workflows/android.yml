@@ -23,21 +23,18 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # Создаем файл инициализации отдельно, чтобы Gradle точно его увидел
-      - name: Create Init Script
-        run: |
-          echo "allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }" > init.gradle
+      # Устанавливаем конкретную версию Gradle, чтобы не зависеть от системной 9.3.1
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.7 
 
       - name: Build with Gradle
         run: |
+          # Заходим в папку, где лежит build.gradle
           cd app
-          # Запускаем сборку, указывая путь к созданному файлу настроек
-          gradle assembleDebug --init-script ../init.gradle
+          # Собираем, используя установленный gradle
+          gradle assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
