@@ -28,7 +28,7 @@ jobs:
         with:
           gradle-version: 8.7
 
-      # Создаем временный build.gradle в корне, который подтянет все зависимости
+      # Создаем временную конфигурацию с РЕАЛЬНЫМИ версиями плагинов
       - name: Emergency Build Fix
         run: |
           cat <<EOF > build.gradle
@@ -39,8 +39,9 @@ jobs:
                   maven { url "https://chaquo.com/maven" }
               }
               dependencies {
+                  # Используем стабильную версию AGP и Chaquopy
                   classpath "com.android.tools.build:gradle:8.2.2"
-                  classpath "com.chaquo.python:gradle:15.0.0"
+                  classpath "com.chaquo.python:gradle:16.0.0"
               }
           }
           allprojects {
@@ -56,9 +57,10 @@ jobs:
 
       - name: Build APK
         run: |
-          # Запускаем сборку из корня. 
-          # Теперь Gradle сначала прочитает наш новый build.gradle с плагинами.
-          gradle :app:assembleDebug --no-daemon
+          # Исправляем права на случай, если какие-то файлы заблокированы
+          chmod -R +x .
+          # Запускаем сборку
+          gradle :app:assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
