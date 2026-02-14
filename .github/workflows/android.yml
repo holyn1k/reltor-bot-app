@@ -28,43 +28,36 @@ jobs:
         with:
           gradle-version: 8.7
 
-      # Создаем настройки, которые знают и про Android, и про Python (Chaquopy)
-      - name: Create Settings & Init
+      # Создаем настройки, которые ГЛОБАЛЬНО прописывают пути к плагинам
+      - name: Prepare Build Environment
         run: |
-          echo "pluginManagement {
+          cat <<EOF > settings.gradle
+          pluginManagement {
               repositories {
                   google()
                   mavenCentral()
+                  maven { url "https://chaquo.com/maven" }
                   gradlePluginPortal()
-                  maven { url 'https://chaquo.com/maven' }
               }
-              resolutionStrategy {
-                  eachPlugin {
-                      if (requested.id.id == 'com.android.application') {
-                          useModule('com.android.tools.build:gradle:8.2.2')
-                      }
-                      if (requested.id.id == 'com.chaquo.python') {
-                          useModule('com.chaquo.python:gradle:15.0.0')
-                      }
-                  }
-              }
-          }" > settings.gradle
-          
-          echo "allprojects {
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
               repositories {
                   google()
                   mavenCentral()
-                  maven { url 'https://chaquo.com/maven' }
+                  maven { url "https://chaquo.com/maven" }
               }
-          }" > init.gradle
+          }
+          include ':app'
+          EOF
 
       - name: Build with Gradle
         run: |
-          cd app
-          # Подменяем настройки и запускаем билд
-          cp ../settings.gradle .
-          gradle assembleDebug --init-script ../init.gradle --no-daemon
-
+          # Запускаем сборку из корня, используя созданный settings.gradle
+          # Мы добавим версию плагина прямо в аргументах, если это возможно, 
+          # но надежнее просто запустить стандартную сборку
+          gradle :app:assembleDebug --no-daemon
+          
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
