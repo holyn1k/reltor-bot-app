@@ -28,36 +28,38 @@ jobs:
         with:
           gradle-version: 8.7
 
-      # Создаем настройки, которые ГЛОБАЛЬНО прописывают пути к плагинам
-      - name: Prepare Build Environment
+      # Создаем временный build.gradle в корне, который подтянет все зависимости
+      - name: Emergency Build Fix
         run: |
-          cat <<EOF > settings.gradle
-          pluginManagement {
-              repositories {
-                  google()
-                  mavenCentral()
-                  maven { url "https://chaquo.com/maven" }
-                  gradlePluginPortal()
-              }
-          }
-          dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+          cat <<EOF > build.gradle
+          buildscript {
               repositories {
                   google()
                   mavenCentral()
                   maven { url "https://chaquo.com/maven" }
               }
+              dependencies {
+                  classpath "com.android.tools.build:gradle:8.2.2"
+                  classpath "com.chaquo.python:gradle:15.0.0"
+              }
           }
-          include ':app'
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+                  maven { url "https://chaquo.com/maven" }
+              }
+          }
           EOF
-
-      - name: Build with Gradle
-        run: |
-          # Запускаем сборку из корня, используя созданный settings.gradle
-          # Мы добавим версию плагина прямо в аргументах, если это возможно, 
-          # но надежнее просто запустить стандартную сборку
-          gradle :app:assembleDebug --no-daemon
           
+          echo "include ':app'" > settings.gradle
+
+      - name: Build APK
+        run: |
+          # Запускаем сборку из корня. 
+          # Теперь Gradle сначала прочитает наш новый build.gradle с плагинами.
+          gradle :app:assembleDebug --no-daemon
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
