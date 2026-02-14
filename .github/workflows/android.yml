@@ -20,23 +20,24 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # Этот шаг магически настраивает всё окружение Android
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # Собираем, используя встроенную обертку, которая игнорирует локальный gradlew
-      - name: Build with Gradle
+      # Создаем файл инициализации отдельно, чтобы Gradle точно его увидел
+      - name: Create Init Script
         run: |
-          cd app
-          # Мы добавим репозитории прямо в команде, чтобы плагин нашелся
-          gradle assembleDebug --init-script - <<EOF
-          allprojects {
+          echo "allprojects {
               repositories {
                   google()
                   mavenCentral()
               }
-          }
-          EOF
+          }" > init.gradle
+
+      - name: Build with Gradle
+        run: |
+          cd app
+          # Запускаем сборку, указывая путь к созданному файлу настроек
+          gradle assembleDebug --init-script ../init.gradle
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
