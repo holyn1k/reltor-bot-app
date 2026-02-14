@@ -11,37 +11,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Загружаем твой код
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Ставим Java (без неё Android не соберется)
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # 3. Собираем проект через СИСТЕМНЫЙ gradle (не требующий файла gradlew)
-      - name: Build with System Gradle
-        run: |
-          # Ищем, где лежит build.gradle, чтобы понять, где корень проекта
-          BUILD_FILE=$(find . -name build.gradle -o -name build.gradle.kts | head -n 1)
-          if [ -z "$BUILD_FILE" ]; then
-            echo "Критическая ошибка: В репозитории нет даже build.gradle!"
-            exit 1
-          fi
-          
-          PROJECT_ROOT=$(dirname "$BUILD_FILE")
-          echo "Проект найден в папке: $PROJECT_ROOT"
-          
-          cd "$PROJECT_ROOT"
-          # Используем глобальную команду gradle вместо ./gradlew
-          gradle assembleDebug
+      # Этот шаг магически настраивает всё окружение Android
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      # 4. Вытаскиваем готовый APK
+      # Собираем, используя встроенную обертку, которая игнорирует локальный gradlew
+      - name: Build with Gradle
+        run: |
+          cd app
+          # Мы добавим репозитории прямо в команде, чтобы плагин нашелся
+          gradle assembleDebug --init-script - <<EOF
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          EOF
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          path: "**/*.apk"
+          path: "**/build/outputs/apk/debug/*.apk"
